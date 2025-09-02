@@ -8,105 +8,217 @@
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
   <style>
     body {
-      font-family: Arial, sans-serif;
       margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       height: 100vh;
       display: flex;
       justify-content: center;
       align-items: center;
-      background: linear-gradient(135deg, #e3f2fd, #ffffff);
+
+      /* Background dengan gambar + overlay putih tipis */
+      background: 
+        linear-gradient(rgba(255,255,255,0.7), rgba(255,255,255,0.7)),
+        url("83BA93C0-BF1B-4657-B236-89460A0E26E7.JPG") no-repeat center center;
+      background-size: cover;
     }
 
     .container {
-      width: 95%;
-      max-width: 900px;
-      padding: 20px;
-      background: rgba(255, 255, 255, 0.95);
+      background: rgba(255,255,255,0.9);
+      padding: 25px;
       border-radius: 20px;
-      box-shadow: 0px 8px 20px rgba(33, 150, 243, 0.25);
-      text-align: center;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+      max-width: 1200px;
+      width: 95%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
     }
 
     h2 {
-      margin-bottom: 20px;
+      text-align: center;
       color: #333;
-      text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+      grid-column: span 2;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+      background: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    th, td {
+      padding: 12px;
+      border-bottom: 1px solid #ddd;
+    }
+
+    th {
+      background: #f9fafb;
+      color: #333;
+    }
+
+    .btn {
+      padding: 6px 12px;
+      margin: 2px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: 0.2s;
+      font-size: 14px;
+    }
+
+    .btn-plus {
+      background: #4CAF50;
+      color: white;
+    }
+
+    .btn-plus:hover {
+      background: #45a049;
+    }
+
+    .btn-minus {
+      background: #f44336;
+      color: white;
+    }
+
+    .btn-minus:hover {
+      background: #da190b;
     }
 
     canvas {
-      margin-top: 20px;
+      width: 100% !important;
+      height: 400px !important;
+    }
+
+    .total {
+      margin-top: 15px;
+      font-weight: bold;
+      text-align: center;
+      font-size: 18px;
+      color: #444;
+      grid-column: span 2;
     }
   </style>
 </head>
 <body>
   <div class="container">
     <h2>Pemilihan Ketua Paguyuban Cluster La Monte Torena 2025 - 2027</h2>
-    <canvas id="pollChart"></canvas>
+
+    <!-- Tabel Kandidat -->
+    <div>
+      <table>
+        <thead>
+          <tr>
+            <th>Nama Calon</th>
+            <th>Polling</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Chart -->
+    <div>
+      <canvas id="pollChart"></canvas>
+    </div>
+
+    <!-- Total Suara -->
+    <div class="total" id="totalVotes">Total Suara: 0</div>
   </div>
 
   <script>
+    const candidates = [
+      "Pak Reza", "Pak Sariful", "Pak Rizki", "Pak Askah",
+      "Pak Irsyad", "Pak Sofyan", "Pak Yunus", "Pak Satimin"
+    ];
+
+    let votes = new Array(candidates.length).fill(0);
+
+    function toRoman(num) {
+      if (num === 0) return "-";
+      return "I".repeat(num);
+    }
+
+    function renderTable() {
+      const tableBody = document.getElementById("tableBody");
+      tableBody.innerHTML = "";
+      votes.forEach((vote, i) => {
+        tableBody.innerHTML += `
+          <tr>
+            <td>${candidates[i]}</td>
+            <td>${toRoman(vote)}</td>
+            <td>
+              <button class="btn btn-plus" onclick="addVote(${i})">+</button>
+              <button class="btn btn-minus" onclick="removeVote(${i})">-</button>
+            </td>
+          </tr>
+        `;
+      });
+      document.getElementById("totalVotes").innerText =
+        "Total Suara: " + votes.reduce((a,b) => a+b, 0);
+    }
+
     const ctx = document.getElementById('pollChart').getContext('2d');
-
-    const data = {
-      labels: ['Budi', 'Andi', 'Siti', 'Joko', 'Rio'],
-      datasets: [{
-        label: 'Total Polling',
-        data: [120, 95, 150, 80, 110],
-        backgroundColor: [
-          'rgba(255, 99, 132, 0.7)',
-          'rgba(54, 162, 235, 0.7)',
-          'rgba(255, 206, 86, 0.7)',
-          'rgba(75, 192, 192, 0.7)',
-          'rgba(153, 102, 255, 0.7)'
-        ],
-        borderColor: [
-          'rgba(255, 99, 132, 1)',
-          'rgba(54, 162, 235, 1)',
-          'rgba(255, 206, 86, 1)',
-          'rgba(75, 192, 192, 1)',
-          'rgba(153, 102, 255, 1)'
-        ],
-        borderWidth: 2
-      }]
-    };
-
-    const config = {
+    const pollChart = new Chart(ctx, {
       type: 'bar',
-      data: data,
+      data: {
+        labels: candidates,
+        datasets: [{
+          label: 'Jumlah Suara',
+          data: votes,
+          backgroundColor: [
+            '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
+            '#9966FF', '#FF9F40', '#66BB6A', '#EF5350'
+          ],
+          borderRadius: 10
+        }]
+      },
       options: {
         responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          y: {
-            beginAtZero: true,
-            ticks: {
-              precision: 0, // biar integer, bukan desimal
-              stepSize: 10
-            }
-          }
-        },
         plugins: {
-          legend: {
-            display: false
-          },
+          legend: { display: false },
+          tooltip: { enabled: true },
           datalabels: {
             anchor: 'end',
-            align: 'end',
+            align: 'top',
+            offset: 4,
             color: '#111',
-            font: {
-              weight: 'bold',
-              size: 14
-            },
-            formatter: function(value) {
-              return value;
-            }
+            font: { weight: 'bold', size: 14 },
+            formatter: value => value
+          }
+        },
+        scales: {
+          y: { 
+            beginAtZero: true,
+            ticks: { stepSize: 1, precision: 0 }
           }
         }
       },
       plugins: [ChartDataLabels]
-    };
+    });
 
-    new Chart(ctx, config);
+    function addVote(index) {
+      votes[index]++;
+      update();
+    }
+
+    function removeVote(index) {
+      if (votes[index] > 0) votes[index]--;
+      update();
+    }
+
+    function update() {
+      pollChart.data.datasets[0].data = votes;
+      pollChart.options.scales.y.max = Math.max(...votes) + 2;
+      pollChart.update();
+      renderTable();
+    }
+
+    renderTable();
   </script>
 </body>
 </html>
